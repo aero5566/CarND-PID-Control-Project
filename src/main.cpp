@@ -30,6 +30,63 @@ string hasData(string s) {
   return "";
 }
 
+double bestError(double cet, std::vector<double> &p)
+{
+	int n = 100;
+	double err = 0;
+	for (int i = 0; i < 2 * n; i++)
+	{
+		if (i >= n)
+		{
+			err += cet * cet;
+		}
+	}
+	return err / n;
+}
+
+void twiddle(double tol, std::vector<double> &p, double cet)
+{
+	//std::vector<double> p = { 0,0,0 };
+	std::vector<double> dp = { 1,1,1 };
+
+	double best_error = bestError(cet, p);
+	int step= 0;
+	double sum_dp = 0;
+	while ((dp[0]+dp[1]+dp[2]) > tol)
+	{
+		for (int j = 0; j < dp.size(); j++)
+		{
+			p[j] += dp[j];
+			double err = 0;
+			err	= bestError(cet, p);
+			if (err < best_error)
+			{
+				best_error = err;
+				dp[j] *= 1.1;
+
+			}
+			else
+			{
+				p[j] -= 2 * dp[j];
+				err = bestError(cet, p);
+				if (err < best_error)
+				{
+					best_error = err;
+					dp[j] *= 1.1;
+				}
+				else
+				{
+					p[j] += dp[j];
+					dp[j] *= 0.9;
+				}
+			}
+
+		}
+		step += 1;
+	}
+
+}
+
 int main() {
   uWS::Hub h;
 
@@ -37,6 +94,7 @@ int main() {
   /**
    * TODO: Initialize the pid variable.
    */
+   pid.Init(0.114, 0, 3.24);
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, 
                      uWS::OpCode opCode) {
@@ -63,6 +121,15 @@ int main() {
            * NOTE: Feel free to play around with the throttle and speed.
            *   Maybe use another PID controller to control the speed!
            */
+          pid.UpdateError(cte);
+           //std::vector<double> p={0,0,0};
+          //twiddle(0.01, p, cte);
+          //std::cout << "P1,P2,P3"<<p[0]<<p[1]<<p[2]<<std::endl;
+		  	  //pid.Kp_ = p[0];
+		    //pid.Kd_ = p[1];
+		    //pid.Ki_ = p[2];
+		  
+		     steer_value = pid.TotalError();
           
           // DEBUG
           std::cout << "CTE: " << cte << " Steering Value: " << steer_value 
